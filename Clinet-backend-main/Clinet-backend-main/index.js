@@ -3,8 +3,7 @@ const express = require('express');
 const cors = require('cors');
 const helmet = require('helmet');
 const morgan = require('morgan');
-const { initializeApp, cert, getApps } = require('firebase-admin/app');
-const { getFirestore, FieldValue } = require('firebase-admin/firestore');
+const admin = require('firebase-admin');
 const jwt = require('jsonwebtoken');
 
 const app = express();
@@ -14,12 +13,12 @@ const PORT = process.env.PORT || 5000;
 let db;
 try {
   const serviceAccount = require('./config/serviceAccountKey.json');
-  if (!getApps().length) {
-    initializeApp({
-      credential: cert(serviceAccount)
+  if (!admin.apps.length) {
+    admin.initializeApp({
+      credential: admin.credential.cert(serviceAccount)
     });
   }
-  db = getFirestore();
+  db = admin.firestore();
   console.log("🔥 Firebase Admin Initialized Successfully");
 } catch (error) {
   console.error("⚠️ Firebase Admin Init Failed - Using Mock Mode:", error.message);
@@ -104,7 +103,7 @@ app.post('/api/answers/save', authenticateToken, async (req, res) => {
       questionId,
       sectionId,
       selectedOption,
-      timestamp: FieldValue.serverTimestamp()
+      timestamp: admin.firestore.FieldValue.serverTimestamp()
     });
     res.json({ success: true });
   } catch (error) {
@@ -127,7 +126,7 @@ app.post('/api/results/submit', authenticateToken, async (req, res) => {
       totalScore,
       percentage,
       status,
-      timestamp: FieldValue.serverTimestamp()
+      timestamp: admin.firestore.FieldValue.serverTimestamp()
     };
     
     await db.collection('results').doc(req.user.uid).set(resultData);
@@ -164,7 +163,7 @@ app.post('/api/violations', authenticateToken, async (req, res) => {
       studentEmail: req.user.email,
       violationType,
       details,
-      timestamp: FieldValue.serverTimestamp()
+      timestamp: admin.firestore.FieldValue.serverTimestamp()
     });
     
     // Lock account if necessary
